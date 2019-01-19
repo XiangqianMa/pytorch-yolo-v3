@@ -41,6 +41,8 @@ def parse_cfg(cfgfile):
     Returns a list of blocks. Each blocks describes a block in the neural
     network to be built. Block is represented as a dictionary in the list
     
+    函数的返回值为包含cfg文件中所有blocks的列表，其中，每一个block以字典的形式
+    进行存储，作为所返回列表一个的元素。
     """
     file = open(cfgfile, 'r')
     lines = file.read().split('\n')     #store the lines in a list
