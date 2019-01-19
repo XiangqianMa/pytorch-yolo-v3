@@ -36,26 +36,29 @@ def get_test_input():
 
 def parse_cfg(cfgfile):
     """
+    输入：初始化文件（.cfg文件）
+
+    输出：包含cfg文件中所有blocks的list，其中，每一个block以字典的形式
+    进行存储，作为所返回列表一个的元素。
+
     Takes a configuration file
     
     Returns a list of blocks. Each blocks describes a block in the neural
     network to be built. Block is represented as a dictionary in the list
-    
-    函数的返回值为包含cfg文件中所有blocks的列表，其中，每一个block以字典的形式
-    进行存储，作为所返回列表一个的元素。
     """
     file = open(cfgfile, 'r')
-    lines = file.read().split('\n')     #store the lines in a list
-    lines = [x for x in lines if len(x) > 0] #get read of the empty lines 
+    lines = file.read().split('\n')             # store the lines in a list
+    lines = [x for x in lines if len(x) > 0]    # get read of the empty lines 
     lines = [x for x in lines if x[0] != '#']  
-    lines = [x.rstrip().lstrip() for x in lines]
+    lines = [x.rstrip().lstrip() for x in lines]# 去除左右的空格
 
     
     block = {}
     blocks = []
     
+    #每一行代表一个block
     for line in lines:
-        if line[0] == "[":               #This marks the start of a new block
+        if line[0] == "[":                      # "#"代表一个block的开始
             if len(block) != 0:
                 blocks.append(block)
                 block = {}
@@ -142,20 +145,31 @@ class ReOrgLayer(nn.Module):
 
 
 def create_modules(blocks):
+    '''
+    功能：依据解析出的blocks列表创建pytorch module。
+    输入：blocks
+    输出：(net_info, module_list)：
+        net_info表示网络的相关信息，从[net]解析得出；
+        module_list：torch.nn.ModuleList()，存放解析出的module。                          
+    '''
     net_info = blocks[0]     #Captures the information about the input and pre-processing    
     
     module_list = nn.ModuleList()
     
-    index = 0    #indexing blocks helps with implementing route  layers (skip connections)
+    index = 0    # indexing blocks helps with implementing route  layers (skip connections)
+                 # 在创建route layers时需要的索引参数。
 
     
-    prev_filters = 3
+    prev_filters = 3 # 创建卷积滤波器时需要的深度信息
     
-    output_filters = []
+    output_filters = [] # we need to keep a track of the number of filters in not only the 
+                        # previous layer, but each one of the preceding layers. As we iterate, 
+                        # we append the number of output filters of each block to the list output_filters
     
     for x in blocks:
         module = nn.Sequential()
         
+        # 跳过net层，该层存储相关输入参数、训练参数等信息
         if (x["type"] == "net"):
             continue
         
@@ -180,11 +194,11 @@ def create_modules(blocks):
             else:
                 pad = 0
                 
-            #Add the convolutional layer
+            # 使用nn.Conv2d()创建卷积模块
             conv = nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias = bias)
-            module.add_module("conv_{0}".format(index), conv)
+            module.add_module("conv_{0}".format(index), conv)# 将其加入nn.Sequential()中
             
-            #Add the Batch Norm Layer
+            # 如果batch_normalize参数为真，加入batch_normalization操作
             if batch_normalize:
                 bn = nn.BatchNorm2d(filters)
                 module.add_module("batch_norm_{0}".format(index), bn)
