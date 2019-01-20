@@ -23,6 +23,9 @@ def convert2cpu(matrix):
         return matrix
 
 def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA = True):
+    '''
+    功能：
+    '''
     batch_size = prediction.size(0)
     stride =  inp_dim // prediction.size(2)
     grid_size = inp_dim // stride
