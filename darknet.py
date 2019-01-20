@@ -103,8 +103,6 @@ class DetectionLayer(nn.Module):
         return prediction
         
 
-        
-
 
 class Upsample(nn.Module):
     def __init__(self, stride=2):
@@ -216,12 +214,13 @@ def create_modules(blocks):
         
         elif (x["type"] == "upsample"):
             stride = int(x["stride"])
-#            upsample = Upsample(stride)
+            # upsample = Upsample(stride)
             upsample = nn.Upsample(scale_factor = 2, mode = "nearest")
             module.add_module("upsample_{}".format(index), upsample)
         
         #If it is a route layer
         elif (x["type"] == "route"):
+            # 依据","号进行划分
             x["layers"] = x["layers"].split(',')
             
             #Start  of a route
@@ -232,10 +231,8 @@ def create_modules(blocks):
                 end = int(x["layers"][1])
             except:
                 end = 0
-                
-            
-            
-            #Positive anotation
+                    
+            # Positive anotation
             if start > 0: 
                 start = start - index
             
@@ -253,8 +250,7 @@ def create_modules(blocks):
             else:
                 filters= output_filters[index + start]
                         
-            
-        
+                
         #shortcut corresponds to skip connection
         elif x["type"] == "shortcut":
             from_ = int(x["from"])
@@ -273,6 +269,7 @@ def create_modules(blocks):
             module.add_module("maxpool_{}".format(index), maxpool)
         
         #Yolo is the detection layer
+        # 检测层（detection layer）的模块名为yolo
         elif x["type"] == "yolo":
             mask = x["mask"].split(",")
             mask = [int(x) for x in mask]

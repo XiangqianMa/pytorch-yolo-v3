@@ -24,7 +24,13 @@ def convert2cpu(matrix):
 
 def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA = True):
     '''
-    功能：
+    功能：该函数在detection layer中被调用，作用是对之前层输出的特征进行处理，依据anchor boxes等参数得到网络的预测。
+    输入参数:prediction：前层网络的输出特征图
+            inp_dim: 输入特征图的维度
+            anchors：预设的先验框
+            num_classes：类别数目
+            CUDA：是否使用cuda，默认为True
+    输出: 网络的输出（prediction）
     '''
     batch_size = prediction.size(0)
     stride =  inp_dim // prediction.size(2)
@@ -46,8 +52,6 @@ def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA = True):
     prediction[:,:,1] = torch.sigmoid(prediction[:,:,1])
     prediction[:,:,4] = torch.sigmoid(prediction[:,:,4])
     
-
-    
     #Add the center offsets
     grid_len = np.arange(grid_size)
     a,b = np.meshgrid(grid_len, grid_len)
@@ -58,7 +62,7 @@ def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA = True):
     if CUDA:
         x_offset = x_offset.cuda()
         y_offset = y_offset.cuda()
-    
+   
     x_y_offset = torch.cat((x_offset, y_offset), 1).repeat(1,num_anchors).view(-1,2).unsqueeze(0)
     
     prediction[:,:,:2] += x_y_offset
