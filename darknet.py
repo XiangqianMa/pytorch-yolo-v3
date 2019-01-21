@@ -239,19 +239,18 @@ def create_modules(blocks):
             if end > 0:
                 end = end - index
 
-            
+            # route层执行的操作过于简单，因而这里只放置一层空层用于结构占位，具体的forward操作直接在darknet module的forward中实现
             route = EmptyLayer()
             module.add_module("route_{0}".format(index), route)
             
-            
-            
+            # 位于Route层之后的卷积层将其内核应用于（可能连接的）前面层的特征图。以下代码更新filters变量以保存Route层输出的过滤器数量
             if end < 0:
                 filters = output_filters[index + start] + output_filters[index + end]
             else:
                 filters= output_filters[index + start]
                         
                 
-        #shortcut corresponds to skip connection
+        # shortcut层也使用空层，因为它执行非常简单的操作（相加）。没有必要更新filters变量，因为它仅仅将前一个层的特征图相加到后面的层的特征图上而已，过滤器的数量不发生变化
         elif x["type"] == "shortcut":
             from_ = int(x["from"])
             shortcut = EmptyLayer()
@@ -531,10 +530,11 @@ class Darknet(nn.Module):
                
 
 
-
+blocks = parse_cfg("cfg/yolov3.cfg")
+print(create_modules(blocks)[1])
 
 #
-#dn = Darknet('cfg/yolov3.cfg')
+# dn = Darknet('cfg/yolov3.cfg')
 #dn.load_weights("yolov3.weights")
 #inp = get_test_input()
 #a, interms = dn(inp)
