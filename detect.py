@@ -49,8 +49,7 @@ def arg_parse():
     Parse arguements to the detect module
     
     """
-    
-    
+
     parser = argparse.ArgumentParser(description='YOLO v3 Detection Module')
    
     parser.add_argument("--images", dest = 'images', help = 
@@ -80,7 +79,6 @@ if __name__ ==  '__main__':
     args = arg_parse()
     
     scales = args.scales
-    
     
 #        scales = [int(x) for x in scales.split(',')]
 #        
@@ -141,7 +139,8 @@ if __name__ ==  '__main__':
     except FileNotFoundError:
         print ("No file or directory with the name {}".format(images))
         exit()
-        
+    
+    print("--------image:-------", imlist)
     if not os.path.exists(args.det):
         os.makedirs(args.det)
         
@@ -299,7 +298,9 @@ if __name__ ==  '__main__':
             
     list(map(lambda x: write(x, im_batches, orig_ims), output))
       
-    det_names = pd.Series(imlist).apply(lambda x: "{}/det_{}".format(args.det,x.split("/")[-1]))
+    det_names = pd.Series(imlist).apply(lambda x: "{}/det_{}".format(args.det,"result.png"))
+
+    print(det_names)
     
     list(map(cv2.imwrite, det_names, orig_ims))
     

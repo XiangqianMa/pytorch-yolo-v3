@@ -26,7 +26,7 @@ class test_net(nn.Module):
         
 def get_test_input():
     img = cv2.imread("dog-cycle-car.png")
-    img = cv2.resize(img, (416,416)) 
+    img = cv2.resize(img, (416, 416)) 
     img_ =  img[:,:,::-1].transpose((2,0,1))
     img_ = img_[np.newaxis,:,:,:]/255.0
     img_ = torch.from_numpy(img_).float()
@@ -281,13 +281,10 @@ def create_modules(blocks):
             
             detection = DetectionLayer(anchors)
             module.add_module("Detection_{}".format(index), detection)
-        
-            
-            
+                    
         else:
             print("Something I dunno")
             assert False
-
 
         module_list.append(module)
         prev_filters = filters
@@ -302,27 +299,26 @@ def create_modules(blocks):
 class Darknet(nn.Module):
     def __init__(self, cfgfile):
         super(Darknet, self).__init__()
+        # 网络结构定义
         self.blocks = parse_cfg(cfgfile)
         self.net_info, self.module_list = create_modules(self.blocks)
         self.header = torch.IntTensor([0,0,0,0])
         self.seen = 0
 
-        
-        
+
     def get_blocks(self):
         return self.blocks
     
     def get_module_list(self):
         return self.module_list
 
-                
+    # 定义网络的前向传播操作，网络的前向传播通过重写nn.Module类的forward()方法实现
     def forward(self, x, CUDA):
         detections = []
         modules = self.blocks[1:]
-        outputs = {}   #We cache the outputs for the route layer
+        outputs = {}   # 由于route和shortcut层需要前面的层的输出图，因此将每个层的输出特征图缓存在字典outputs中。键是层的索引，值是特征图
         
-        
-        write = 0
+        write = 0 # 标志位，标志是否是第一次检测
         for i in range(len(modules)):        
             
             module_type = (modules[i]["type"])
@@ -336,12 +332,15 @@ class Darknet(nn.Module):
                 layers = modules[i]["layers"]
                 layers = [int(a) for a in layers]
                 
+                # 将参数大于零和小于零的情况都转换为从当前层往前数的层数
                 if (layers[0]) > 0:
                     layers[0] = layers[0] - i
-
+                
+                # layers只有一个参数时直接输出对应层的特征图即可
                 if len(layers) == 1:
                     x = outputs[i + (layers[0])]
-
+               
+                # 两个参数时需要按照深度对两层的特征图进行拼接
                 else:
                     if (layers[1]) > 0:
                         layers[1] = layers[1] - i
@@ -355,13 +354,12 @@ class Darknet(nn.Module):
             
             elif  module_type == "shortcut":
                 from_ = int(modules[i]["from"])
+                # 将前一层和from_指定的层的特征图进行相加
                 x = outputs[i-1] + outputs[i+from_]
                 outputs[i] = x
                 
-            
-            
             elif module_type == 'yolo':        
-                
+
                 anchors = self.module_list[i][0].anchors
                 #Get the input dimensions
                 inp_dim = int (self.net_info["height"])
@@ -376,18 +374,17 @@ class Darknet(nn.Module):
                 if type(x) == int:
                     continue
 
-                
+                # 注意：无法将一个张量连接至一个空的张量，所以要分情况讨论
+                # 如果是第一次检测，则直接将网络预测输出赋值未detections
                 if not write:
                     detections = x
                     write = 1
-                
+                # 如果不是第一检测，则执行连接操作
                 else:
                     detections = torch.cat((detections, x), 1)
                 
                 outputs[i] = outputs[i-1]
                 
-        
-        
         try:
             return detections
         except:
@@ -395,7 +392,11 @@ class Darknet(nn.Module):
 
             
     def load_weights(self, weightfile):
-        
+        '''
+        功能：从二进制文件中加载权重
+        输入参数:self
+                weightfile权重文件的名称
+        '''
         #Open the weights file
         fp = open(weightfile, "rb")
 
@@ -408,21 +409,27 @@ class Darknet(nn.Module):
         self.header = torch.from_numpy(header)
         self.seen = self.header[3]
         
-        #The rest of the values are the weights
+        # The rest of the values are the weights
         # Let's load them up
+        # 将二进制文件中剩余的数据以float32的形式进行加载
         weights = np.fromfile(fp, dtype = np.float32)
         
+        # 指向当前已读取到的数据位置
         ptr = 0
         for i in range(len(self.module_list)):
             module_type = self.blocks[i + 1]["type"]
             
+            # 只有在网络层未卷积层的情况下才有权重，route, shortcut, upsampling, maxpooling层均无权重
             if module_type == "convolutional":
                 model = self.module_list[i]
+                # 带有batch_normalize的卷积层和不带有batch_normalize的卷积层的权重存储方式不同
+                # 所以应该先判断本层是否带有bn，如果带有bn则先读取bn，再读取conv
                 try:
                     batch_normalize = int(self.blocks[i+1]["batch_normalize"])
                 except:
                     batch_normalize = 0
                 
+                # 先卷积后bn
                 conv = model[0]
                 
                 if (batch_normalize):
@@ -450,7 +457,7 @@ class Darknet(nn.Module):
                     bn_running_mean = bn_running_mean.view_as(bn.running_mean)
                     bn_running_var = bn_running_var.view_as(bn.running_var)
 
-                    #Copy the data to model
+                    # 将权重赋值给模型
                     bn.bias.data.copy_(bn_biases)
                     bn.weight.data.copy_(bn_weights)
                     bn.running_mean.copy_(bn_running_mean)
@@ -530,13 +537,15 @@ class Darknet(nn.Module):
                
 
 
-blocks = parse_cfg("cfg/yolov3.cfg")
-print(create_modules(blocks)[1])
+# blocks = parse_cfg("cfg/yolov3.cfg")
+# print(create_modules(blocks)[1])
 
 #
-# dn = Darknet('cfg/yolov3.cfg')
-#dn.load_weights("yolov3.weights")
-#inp = get_test_input()
+# model = Darknet("cfg/yolov3.cfg").cuda()
+# model.load_weights("yolov3.weights")
+# inp = get_test_input().cuda()
+# pred = model(inp, True)
+# print(pred)
 #a, interms = dn(inp)
 #dn.eval()
 #a_i, interms_i = dn(inp)
