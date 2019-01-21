@@ -257,7 +257,6 @@ if __name__ ==  '__main__':
     
     scaling_factor = torch.min(inp_dim/im_dim_list,1)[0].view(-1,1)
     
-    
     output[:,[1,3]] -= (inp_dim - scaling_factor*im_dim_list[:,0].view(-1,1))/2
     output[:,[2,4]] -= (inp_dim - scaling_factor*im_dim_list[:,1].view(-1,1))/2
     
