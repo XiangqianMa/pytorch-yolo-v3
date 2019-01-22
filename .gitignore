@@ -101,3 +101,5 @@ ENV/
 .mypy_cache/
 
 yolov3.weights
+2012_004331.jpg
+2012_004331.xml

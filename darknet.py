@@ -297,6 +297,9 @@ def create_modules(blocks):
 
 
 class Darknet(nn.Module):
+    '''
+    功能：构建网络结构，执行反向传播
+    '''
     def __init__(self, cfgfile):
         super(Darknet, self).__init__()
         # 网络结构定义
@@ -314,6 +317,11 @@ class Darknet(nn.Module):
 
     # 定义网络的前向传播操作，网络的前向传播通过重写nn.Module类的forward()方法实现
     def forward(self, x, CUDA):
+        '''
+        输入参数: x：输入样本数据
+                 CUDA：是否使用CUDA的标志位，为True则使用，False则不使用
+        输出参数：detection：Tensor类型，网络的输出，大小为[batch_size, all_anchors, (5+classes_num)]
+        '''
         detections = []
         modules = self.blocks[1:]
         outputs = {}   # 由于route和shortcut层需要前面的层的输出图，因此将每个层的输出特征图缓存在字典outputs中。键是层的索引，值是特征图
@@ -348,7 +356,7 @@ class Darknet(nn.Module):
                     map1 = outputs[i + layers[0]]
                     map2 = outputs[i + layers[1]]
                     
-                    
+                    # 进行拼接
                     x = torch.cat((map1, map2), 1)
                 outputs[i] = x
             
@@ -375,7 +383,7 @@ class Darknet(nn.Module):
                     continue
 
                 # 注意：无法将一个张量连接至一个空的张量，所以要分情况讨论
-                # 如果是第一次检测，则直接将网络预测输出赋值未detections
+                # 如果是第一次检测，则直接将网络预测输出赋值给detections
                 if not write:
                     detections = x
                     write = 1
@@ -537,8 +545,8 @@ class Darknet(nn.Module):
                
 
 
-# blocks = parse_cfg("cfg/yolov3.cfg")
-# print(create_modules(blocks)[1])
+blocks = parse_cfg("cfg/yolov3.cfg")
+print(create_modules(blocks)[1])
 
 #
 # model = Darknet("cfg/yolov3.cfg").cuda()
